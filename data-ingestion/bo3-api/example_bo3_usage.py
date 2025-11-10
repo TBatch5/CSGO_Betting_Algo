@@ -3,11 +3,14 @@ Example usage of the BO3 API client.
 
 This demonstrates how to use the BO3Client to fetch matches with AI predictions
 for Method 1 implementation.
+
+The client now returns strongly typed models from models.py.
 """
 
 from bo3_client import BO3Client
+from models import BO3Match, BO3AIPrediction, BO3BettingOdds
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 import json
 
 
@@ -24,22 +27,24 @@ def example_fetch_upcoming_week() -> None:
         # Display first match details
         if matches:
             match = matches[0]
-            print(f"\nFirst match: {match.get('id')}")
-            print(f"Teams: {match.get('team1', {}).get('name')} vs {match.get('team2', {}).get('name')}")
-            print(f"Start date: {match.get('start_date')}")
+            print(f"\nFirst match: {match.id}")
+            team1_name = match.team1.name if match.team1 else f"Team {match.team1_id}"
+            team2_name = match.team2.name if match.team2 else f"Team {match.team2_id}"
+            print(f"Teams: {team1_name} vs {team2_name}")
+            print(f"Start date: {match.start_date}")
             
             # Check for AI predictions
             ai_pred = client.extract_ai_predictions(match)
             if ai_pred:
-                print(f"AI Prediction: {ai_pred.get('prediction_team1_score')}-{ai_pred.get('prediction_team2_score')}")
-                print(f"Predicted winner: Team ID {ai_pred.get('prediction_winner_team_id')}")
+                print(f"AI Prediction: {ai_pred.prediction_team1_score}-{ai_pred.prediction_team2_score}")
+                print(f"Predicted winner: Team ID {ai_pred.prediction_winner_team_id}")
             
             # Check for betting odds
             odds = client.extract_betting_odds(match)
             if odds:
-                print(f"Betting odds available from {odds.get('provider')}")
-                print(f"Team 1 odds: {odds.get('team_1', {}).get('coeff')}")
-                print(f"Team 2 odds: {odds.get('team_2', {}).get('coeff')}")
+                print(f"Betting odds available from {odds.provider}")
+                print(f"Team 1 odds: {odds.team_1.coeff}")
+                print(f"Team 2 odds: {odds.team_2.coeff}")
     
     finally:
         client.close()
@@ -83,19 +88,19 @@ def example_fetch_matches_with_predictions() -> None:
         
         # Process matches for Method 1
         for match in matches[:5]:  # Show first 5
-            ai_pred = match.get("ai_predictions")
-            odds = match.get("bet_updates")
+            ai_pred = match.ai_predictions
+            odds = match.bet_updates
             
             if ai_pred and odds:
-                team1_name = match.get("team1", {}).get("name")
-                team2_name = match.get("team2", {}).get("name")
+                team1_name = match.team1.name if match.team1 else f"Team {match.team1_id}"
+                team2_name = match.team2.name if match.team2 else f"Team {match.team2_id}"
                 
-                predicted_winner_id = ai_pred.get("prediction_winner_team_id")
-                predicted_team1_score = ai_pred.get("prediction_team1_score")
-                predicted_team2_score = ai_pred.get("prediction_team2_score")
+                predicted_winner_id = ai_pred.prediction_winner_team_id
+                predicted_team1_score = ai_pred.prediction_team1_score
+                predicted_team2_score = ai_pred.prediction_team2_score
                 
-                team1_odds = odds.get("team_1", {}).get("coeff")
-                team2_odds = odds.get("team_2", {}).get("coeff")
+                team1_odds = odds.team_1.coeff
+                team2_odds = odds.team_2.coeff
                 
                 # Calculate implied probabilities from odds
                 team1_implied_prob = 1 / team1_odds if team1_odds else None

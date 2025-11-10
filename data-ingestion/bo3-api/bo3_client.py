@@ -4,6 +4,8 @@ BO3 API Client for fetching CS2 match data with AI predictions.
 This client is designed to fetch match data from the BO3 API, specifically
 focusing on upcoming matches with AI predictions and betting odds for
 Method 1 implementation.
+
+Returns strongly typed models defined in models.py.
 """
 
 import requests
@@ -12,6 +14,9 @@ from typing import List, Dict, Optional, Set, Any, cast
 from urllib.parse import urlencode
 import time
 import logging
+
+from models import BO3Match, BO3AIPrediction, BO3BettingOdds, BO3Tournament
+from parser import parse_match, parse_ai_prediction, parse_betting_odds, parse_tournament
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +182,7 @@ class BO3Client:
         start_date_lte: Optional[datetime] = None,
         include_related: Optional[List[str]] = None,
         fetch_all_pages: bool = True
-    ) -> List[Dict[str, Any]]:
+    ) -> List[BO3Match]:
         """
         Fetch matches from the BO3 API.
         
@@ -192,7 +197,7 @@ class BO3Client:
             fetch_all_pages: Whether to fetch all pages or just the first
             
         Returns:
-            List of match dictionaries
+            List of BO3Match models
         """
         if status is None:
             status = ["upcoming", "current"]
@@ -203,7 +208,7 @@ class BO3Client:
         if include_related is None:
             include_related = ["teams", "tournament", "ai_predictions", "games"]
         
-        all_matches = []
+        all_matches_raw = []
         offset = 0
         
         while True:
@@ -220,7 +225,7 @@ class BO3Client:
             response = self._make_request("/matches", params=params)
             
             matches = response.get("results", [])
-            all_matches.extend(matches)
+            all_matches_raw.extend(matches)
             
             # Check if more pages exist
             total = response.get("total", {})
@@ -236,8 +241,17 @@ class BO3Client:
             if len(matches) == 0:
                 break
         
-        logger.info(f"Fetched {len(all_matches)} matches")
-        return all_matches
+        # Parse all matches to typed models
+        parsed_matches: List[BO3Match] = []
+        for match_data in all_matches_raw:
+            try:
+                parsed_matches.append(parse_match(match_data))
+            except (ValueError, KeyError, TypeError) as e:
+                logger.warning(f"Failed to parse match {match_data.get('id')}: {e}")
+                continue
+        
+        logger.info(f"Fetched {len(parsed_matches)} matches (parsed from {len(all_matches_raw)} raw matches)")
+        return parsed_matches
     
     def fetch_upcoming_week_matches(
         self,
@@ -245,7 +259,7 @@ class BO3Client:
         tier: Optional[List[str]] = None,
         tournament_ids: Optional[List[int]] = None,
         include_related: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> List[BO3Match]:
         """
         Fetch all upcoming matches for the next N days.
         
@@ -256,7 +270,7 @@ class BO3Client:
             include_related: Related resources to include
             
         Returns:
-            List of match dictionaries
+            List of BO3Match models
         """
         now = datetime.utcnow()
         week_end = now + timedelta(days=days_ahead)
@@ -276,7 +290,7 @@ class BO3Client:
         self,
         match_id: int,
         include_related: Optional[List[str]] = None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[BO3Match]:
         """
         Fetch a specific match by ID.
         
@@ -285,7 +299,7 @@ class BO3Client:
             include_related: Related resources to include
             
         Returns:
-            Match dictionary or None if not found
+            BO3Match model or None if not found
         """
         if include_related is None:
             include_related = ["teams", "tournament", "ai_predictions", "games"]
@@ -296,48 +310,51 @@ class BO3Client:
         
         try:
             response = self._make_request(f"/matches/{match_id}", params=params)
-            return response
+            return parse_match(response)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 logger.warning(f"Match {match_id} not found")
                 return None
             raise
+        except (ValueError, KeyError, TypeError) as e:
+            logger.error(f"Failed to parse match {match_id}: {e}")
+            return None
     
-    def extract_ai_predictions(self, match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_ai_predictions(self, match: BO3Match) -> Optional[BO3AIPrediction]:
         """
         Extract AI predictions from a match object.
         
         Args:
-            match: Match dictionary from API response
+            match: BO3Match model
             
         Returns:
-            AI predictions dictionary or None if not available
+            BO3AIPrediction model or None if not available
         """
-        return match.get("ai_predictions")
+        return match.ai_predictions
     
-    def extract_betting_odds(self, match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_betting_odds(self, match: BO3Match) -> Optional[BO3BettingOdds]:
         """
         Extract betting odds from a match object.
         
         Args:
-            match: Match dictionary from API response
+            match: BO3Match model
             
         Returns:
-            Betting odds dictionary or None if not available
+            BO3BettingOdds model or None if not available
         """
-        return match.get("bet_updates")
+        return match.bet_updates
     
-    def extract_tournament_info(self, match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_tournament_info(self, match: BO3Match) -> Optional[BO3Tournament]:
         """
         Extract tournament information from a match object.
         
         Args:
-            match: Match dictionary from API response
+            match: BO3Match model
             
         Returns:
-            Tournament dictionary or None if not available
+            BO3Tournament model or None if not available
         """
-        return match.get("tournament")
+        return match.tournament
     
     def get_matches_with_predictions(
         self,
@@ -345,7 +362,7 @@ class BO3Client:
         tier: Optional[List[str]] = None,
         tournament_ids: Optional[List[int]] = None,
         require_odds: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> List[BO3Match]:
         """
         Fetch upcoming matches that have AI predictions (and optionally odds).
         
@@ -358,7 +375,7 @@ class BO3Client:
             require_odds: Whether to only return matches with betting odds
             
         Returns:
-            List of matches with AI predictions
+            List of BO3Match models with AI predictions
         """
         matches = self.fetch_upcoming_week_matches(
             days_ahead=days_ahead,
@@ -368,10 +385,10 @@ class BO3Client:
         
         filtered = []
         for match in matches:
-            if match.get("ai_predictions") is None:
+            if match.ai_predictions is None:
                 continue
             
-            if require_odds and match.get("bet_updates") is None:
+            if require_odds and match.bet_updates is None:
                 continue
             
             filtered.append(match)
@@ -379,23 +396,22 @@ class BO3Client:
         logger.info(f"Found {len(filtered)} matches with AI predictions (odds required: {require_odds})")
         return filtered
     
-    def get_unique_tournaments(self, matches: List[Dict[str, Any]]) -> Set[int]:
+    def get_unique_tournaments(self, matches: List[BO3Match]) -> Set[int]:
         """
         Extract unique tournament IDs from a list of matches.
         
         Args:
-            matches: List of match dictionaries
+            matches: List of BO3Match models
             
         Returns:
             Set of tournament IDs
         """
         tournament_ids: Set[int] = set()
         for match in matches:
-            tournament = match.get("tournament")
-            if tournament and isinstance(tournament, dict):
-                tournament_id = tournament.get("id")
-                if isinstance(tournament_id, int):
-                    tournament_ids.add(tournament_id)
+            if match.tournament:
+                tournament_ids.add(match.tournament.id)
+            elif match.tournament_id:
+                tournament_ids.add(match.tournament_id)
         return tournament_ids
     
     def close(self) -> None:
