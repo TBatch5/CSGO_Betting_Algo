@@ -2,90 +2,70 @@
 
 ## Purpose
 
-The Data Ingestion Service is responsible for collecting CS2 match data from HLTV and preparing it for storage. This service acts as the entry point for all external data into the system.
+The Data Ingestion Service is responsible for collecting CS2 match data from external sources and preparing it for storage. Currently, this service provides integration with the BO3 API for fetching match data with AI predictions and betting odds (Method 1).
 
-## Responsibilities
+## Current Implementation
 
-- **HLTV Integration**: Scrape/fetch match data, team information, player statistics, and historical results from HLTV
-- **Data Validation**: Ensure data quality and completeness before storage
-- **Data Normalization**: Transform HLTV data into our internal schema format
-- **Scheduling**: Run periodic ingestion jobs to keep data up-to-date
-- **Error Handling**: Manage rate limiting, retries, and failed ingestion attempts
+### BO3 API Client
 
-## Agent Context Boundaries
+The service includes a BO3 API client for fetching CS2 match data with AI predictions and betting odds.
 
-This service should be self-contained with minimal external dependencies:
-- **Input**: HLTV API/website endpoints, configuration (schedules, rate limits)
-- **Output**: Validated, normalized data sent to `data-storage` service
-- **No Direct Dependencies On**: Feature engineering, models, or predictions
+**Location:** `bo3-api/bo3_client.py`
 
-## Key Components
-
-### 1. HLTV Client
-- Web scraping or API client for HLTV
-- Handles authentication, rate limiting, and retries
-- Extracts: matches, teams, players, maps, statistics
-
-### 2. Data Validator
-- Schema validation against shared data models
-- Completeness checks (required fields)
-- Data quality checks (ranges, formats)
-
-### 3. Data Normalizer
-- Transform HLTV format → internal schema
-- Handle missing/null values
-- Standardize date formats, team names, etc.
-
-### 4. Ingestion Orchestrator
-- Schedule periodic ingestion jobs
-- Manage batch vs. real-time ingestion
-- Coordinate with storage service
-
-## Data Schema (Output)
-
-The service outputs data in the following structure:
-- **Matches**: Match ID, date, teams, score, maps, tournament info
-- **Teams**: Team ID, name, roster, rankings
-- **Players**: Player ID, name, team, statistics
-- **Maps**: Map name, statistics, round-by-round data
-
-## Communication
-
-- **Publishes To**: `data-storage` service (via message queue or direct API)
-- **Consumes From**: HLTV (external)
-- **Uses**: `shared` utilities for schemas and common functions
+**Key Features:**
+- Fetch upcoming matches for a specified number of days
+- Filter by tournament tier (S-tier, A-tier, etc.)
+- Tournament whitelisting support
+- Extract AI predictions and betting odds
+- Automatic pagination handling
+- Retry logic with exponential backoff
+- Rate limiting support
 
 ## Setup
 
 1. Install dependencies: `pip install -r requirements.txt`
-2. Configure HLTV credentials/endpoints in `config.yaml`
-3. Set up message queue connection (if using async)
-4. Run: `python main.py` or use scheduler (cron, Celery, etc.)
+2. See `bo3-api/example_bo3_usage.py` for usage examples
 
 ## Example Usage
 
+### BO3 API Client (Method 1)
+
 ```python
-from data_ingestion.hltv_client import HLTVClient
-from data_ingestion.validator import DataValidator
-from data_ingestion.storage_client import StorageClient
+# Run from bo3-api directory or add to path
+from bo3_client import BO3Client
 
-# Fetch recent matches
-client = HLTVClient()
-matches = client.fetch_recent_matches(days=7)
+# Initialize client
+client = BO3Client()
 
-# Validate and normalize
-validator = DataValidator()
-normalized = validator.validate_and_normalize(matches)
-
-# Send to storage
-storage = StorageClient()
-storage.save_matches(normalized)
+try:
+    # Fetch upcoming matches for the next week with AI predictions
+    matches = client.fetch_upcoming_week_matches(days_ahead=7)
+    
+    # Or fetch only matches with AI predictions and odds
+    matches_with_predictions = client.get_matches_with_predictions(
+        days_ahead=7,
+        require_odds=True
+    )
+    
+    # Extract AI predictions and odds for analysis
+    for match in matches_with_predictions:
+        ai_pred = client.extract_ai_predictions(match)
+        odds = client.extract_betting_odds(match)
+        # Process for Method 1: compare AI predictions vs odds
+        
+finally:
+    client.close()
 ```
+
+See `bo3-api/example_bo3_usage.py` for more detailed examples.
 
 ## Future Enhancements
 
+- HLTV integration for historical match data
+- Data validation and normalization components
+- Storage service integration
+- Scheduling and orchestration for periodic ingestion
 - Support for other data sources (ESL, BLAST, etc.)
 - Real-time match tracking
 - Historical data backfill utilities
 - Data quality monitoring and alerting
-
