@@ -60,9 +60,41 @@ This project follows a **microservices architecture** designed to be agent-frien
 - **ML Framework**: scikit-learn, XGBoost, or PyTorch
 - **Containerization**: Docker + Docker Compose
 
-### Getting Started
+## Development Practices
 
-Each service directory contains its own README with specific setup instructions. Start with:
-1. `shared/README.md` - Common setup and dependencies
-2. `data-storage/README.md` - Database setup
-3. `data-ingestion/README.md` - HLTV integration  
+### Type Checking
+
+This project uses **strict typing** with mypy. All Python code must pass type checking.
+
+**Configuration:**
+- `pyproject.toml` - mypy strict configuration
+- Type stubs: `types-requests` for external libraries
+
+**Enforcement:**
+- **Pre-commit hooks**: Automatically run mypy before commits (install with `make install-hooks`)
+- **CI/CD**: GitHub Actions workflow checks types on push/PR
+- **Manual check**: Run `make type-check` or `mypy data-ingestion/bo3-api/ --config-file pyproject.toml`
+
+**Quick Start:**
+```bash
+# Install type checking dependencies
+make install-types
+
+# Run type check
+make type-check
+
+# Install pre-commit hooks (recommended)
+make install-hooks
+```
+
+All new code must include complete type annotations. The strict mypy configuration will catch:
+- Missing type annotations
+- Incorrect types
+- Implicit optional values
+- Untyped function definitions
+
+## Methods
+
+### Method 1 - BO3-API prediction leveraging
+
+The BO3-API has a ai_predictions key. I want to look to leverage this key, combined with odds data and figure out if utilising the score or team prediction would result in above average statistical chance and return.

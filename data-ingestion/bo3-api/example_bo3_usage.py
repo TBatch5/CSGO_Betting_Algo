@@ -7,10 +7,11 @@ for Method 1 implementation.
 
 from bo3_client import BO3Client
 from datetime import datetime
+from typing import List, Dict, Any, Optional
 import json
 
 
-def example_fetch_upcoming_week():
+def example_fetch_upcoming_week() -> None:
     """Example: Fetch all upcoming matches for the next week."""
     client = BO3Client()
     
@@ -44,7 +45,7 @@ def example_fetch_upcoming_week():
         client.close()
 
 
-def example_fetch_with_tournament_whitelist():
+def example_fetch_with_tournament_whitelist() -> None:
     """Example: Fetch matches from specific tournaments only."""
     client = BO3Client()
     
@@ -67,7 +68,7 @@ def example_fetch_with_tournament_whitelist():
         client.close()
 
 
-def example_fetch_matches_with_predictions():
+def example_fetch_matches_with_predictions() -> None:
     """Example: Fetch only matches that have AI predictions (and optionally odds)."""
     client = BO3Client()
     
@@ -109,7 +110,7 @@ def example_fetch_matches_with_predictions():
         client.close()
 
 
-def example_custom_filters():
+def example_custom_filters() -> None:
     """Example: Using custom filters for more specific queries."""
     client = BO3Client()
     

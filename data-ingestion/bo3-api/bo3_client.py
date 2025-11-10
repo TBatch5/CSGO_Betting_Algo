@@ -8,7 +8,7 @@ Method 1 implementation.
 
 import requests
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Any, cast
 from urllib.parse import urlencode
 import time
 import logging
@@ -23,11 +23,11 @@ class BO3Client:
     Handles fetching matches, AI predictions, betting odds, and tournament data.
     """
     
-    BASE_URL = "https://api.bo3.gg/api/v1"
-    CS2_DISCIPLINE_ID = 1  # CS2 discipline ID
-    DEFAULT_PAGE_LIMIT = 50
-    DEFAULT_RETRY_DELAY = 1  # seconds
-    DEFAULT_MAX_RETRIES = 3
+    BASE_URL: str = "https://api.bo3.gg/api/v1"
+    CS2_DISCIPLINE_ID: int = 1  # CS2 discipline ID
+    DEFAULT_PAGE_LIMIT: int = 50
+    DEFAULT_RETRY_DELAY: int = 1  # seconds
+    DEFAULT_MAX_RETRIES: int = 3
     
     def __init__(
         self,
@@ -45,11 +45,11 @@ class BO3Client:
             rate_limit_delay: Delay between requests to respect rate limits
             max_retries: Maximum number of retries for failed requests
         """
-        self.base_url = base_url or self.BASE_URL
-        self.timeout = timeout
-        self.rate_limit_delay = rate_limit_delay
-        self.max_retries = max_retries
-        self.session = requests.Session()
+        self.base_url: str = base_url or self.BASE_URL
+        self.timeout: int = timeout
+        self.rate_limit_delay: float = rate_limit_delay
+        self.max_retries: int = max_retries
+        self.session: requests.Session = requests.Session()
         self.session.headers.update({
             "Accept": "application/json",
             "User-Agent": "CS2-Betting-MVP/1.0"
@@ -58,9 +58,9 @@ class BO3Client:
     def _make_request(
         self,
         endpoint: str,
-        params: Optional[Dict] = None,
+        params: Optional[Dict[str, Any]] = None,
         retry_count: int = 0
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """
         Make a request to the BO3 API with retry logic.
         
@@ -84,7 +84,7 @@ class BO3Client:
             
             response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
-            return response.json()
+            return cast(Dict[str, Any], response.json())
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:  # Rate limited
@@ -112,16 +112,16 @@ class BO3Client:
     
     def _build_match_params(
         self,
-        status: List[str] = None,
-        tier: List[str] = None,
+        status: Optional[List[str]] = None,
+        tier: Optional[List[str]] = None,
         tournament_ids: Optional[List[int]] = None,
         start_date_gte: Optional[datetime] = None,
         start_date_lte: Optional[datetime] = None,
-        include_related: List[str] = None,
+        include_related: Optional[List[str]] = None,
         sort: str = "start_date",
         page_offset: int = 0,
         page_limit: int = DEFAULT_PAGE_LIMIT
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """
         Build query parameters for matches endpoint.
         
@@ -170,14 +170,14 @@ class BO3Client:
     
     def fetch_matches(
         self,
-        status: List[str] = None,
-        tier: List[str] = None,
+        status: Optional[List[str]] = None,
+        tier: Optional[List[str]] = None,
         tournament_ids: Optional[List[int]] = None,
         start_date_gte: Optional[datetime] = None,
         start_date_lte: Optional[datetime] = None,
-        include_related: List[str] = None,
+        include_related: Optional[List[str]] = None,
         fetch_all_pages: bool = True
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Fetch matches from the BO3 API.
         
@@ -242,10 +242,10 @@ class BO3Client:
     def fetch_upcoming_week_matches(
         self,
         days_ahead: int = 7,
-        tier: List[str] = None,
+        tier: Optional[List[str]] = None,
         tournament_ids: Optional[List[int]] = None,
-        include_related: List[str] = None
-    ) -> List[Dict]:
+        include_related: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
         """
         Fetch all upcoming matches for the next N days.
         
@@ -275,8 +275,8 @@ class BO3Client:
     def fetch_match_by_id(
         self,
         match_id: int,
-        include_related: List[str] = None
-    ) -> Optional[Dict]:
+        include_related: Optional[List[str]] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Fetch a specific match by ID.
         
@@ -303,7 +303,7 @@ class BO3Client:
                 return None
             raise
     
-    def extract_ai_predictions(self, match: Dict) -> Optional[Dict]:
+    def extract_ai_predictions(self, match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Extract AI predictions from a match object.
         
@@ -315,7 +315,7 @@ class BO3Client:
         """
         return match.get("ai_predictions")
     
-    def extract_betting_odds(self, match: Dict) -> Optional[Dict]:
+    def extract_betting_odds(self, match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Extract betting odds from a match object.
         
@@ -327,7 +327,7 @@ class BO3Client:
         """
         return match.get("bet_updates")
     
-    def extract_tournament_info(self, match: Dict) -> Optional[Dict]:
+    def extract_tournament_info(self, match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Extract tournament information from a match object.
         
@@ -342,10 +342,10 @@ class BO3Client:
     def get_matches_with_predictions(
         self,
         days_ahead: int = 7,
-        tier: List[str] = None,
+        tier: Optional[List[str]] = None,
         tournament_ids: Optional[List[int]] = None,
         require_odds: bool = False
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """
         Fetch upcoming matches that have AI predictions (and optionally odds).
         
@@ -379,7 +379,7 @@ class BO3Client:
         logger.info(f"Found {len(filtered)} matches with AI predictions (odds required: {require_odds})")
         return filtered
     
-    def get_unique_tournaments(self, matches: List[Dict]) -> Set[int]:
+    def get_unique_tournaments(self, matches: List[Dict[str, Any]]) -> Set[int]:
         """
         Extract unique tournament IDs from a list of matches.
         
@@ -389,14 +389,16 @@ class BO3Client:
         Returns:
             Set of tournament IDs
         """
-        tournament_ids = set()
+        tournament_ids: Set[int] = set()
         for match in matches:
             tournament = match.get("tournament")
-            if tournament and tournament.get("id"):
-                tournament_ids.add(tournament["id"])
+            if tournament and isinstance(tournament, dict):
+                tournament_id = tournament.get("id")
+                if isinstance(tournament_id, int):
+                    tournament_ids.add(tournament_id)
         return tournament_ids
     
-    def close(self):
+    def close(self) -> None:
         """Close the HTTP session."""
         self.session.close()
 
