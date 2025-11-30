@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from mutations.base import BaseMutation
-from mutations.models import Team, Tournament, Match, AIPrediction, BettingOdds
+from models import Team, Tournament, Match, AIPrediction, BettingOdds
 
 # Import BO3 models from data-ingestion
 # Note: This assumes data-ingestion is in the parent directory structure

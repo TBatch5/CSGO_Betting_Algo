@@ -24,7 +24,7 @@ sys.modules["sqlalchemy.exc"] = MagicMock()
 # Mock config
 sys.modules["config"] = MagicMock()
 
-from mutations.models import Team, Tournament, Match, AIPrediction, BettingOdds
+from models import Team, Tournament, Match, AIPrediction, BettingOdds
 from mutations.bo3_mutations import BO3Mutation
 from storage_service import StorageService
 

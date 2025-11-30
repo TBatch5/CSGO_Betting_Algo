@@ -5,7 +5,7 @@ Base mutation interface for converting API responses to database schema.
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from uuid import UUID
-from mutations.models import Team, Tournament, Match, AIPrediction, BettingOdds
+from models import Team, Tournament, Match, AIPrediction, BettingOdds
 
 
 class BaseMutation(ABC):
