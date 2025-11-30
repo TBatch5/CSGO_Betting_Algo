@@ -7,8 +7,8 @@ for Method 1 implementation.
 The client now returns strongly typed models from models.py.
 """
 
-from bo3_client import BO3Client
-from models import BO3Match, BO3AIPrediction, BO3BettingOdds
+from .bo3_client import BO3Client
+from .models import BO3Match, BO3AIPrediction, BO3BettingOdds
 from datetime import datetime
 from typing import List, Optional
 import json

@@ -9,6 +9,9 @@ venv/
 ENV/
 .venv
 
+# Site packages
+lib/
+
 # Environment variables
 .env
 .env.local

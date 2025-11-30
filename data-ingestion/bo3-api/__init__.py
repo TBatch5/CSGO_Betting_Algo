@@ -1,7 +1,7 @@
 """BO3 API client and models for CS2 match data."""
 
-from bo3_client import BO3Client
-from models import (
+from .bo3_client import BO3Client
+from .models import (
     BO3Team,
     BO3Tournament,
     BO3Match,
@@ -10,7 +10,7 @@ from models import (
     BO3BettingTeam,
     BO3PredictionScoresData,
 )
-from parser import (
+from .parser import (
     parse_match,
     parse_team,
     parse_tournament,

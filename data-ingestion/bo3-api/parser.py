@@ -5,7 +5,7 @@ Parser for converting BO3 API JSON responses to strongly typed models.
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
-from models import (
+from .models import (
     BO3Team,
     BO3Tournament,
     BO3Match,

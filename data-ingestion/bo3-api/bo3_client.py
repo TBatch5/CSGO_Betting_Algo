@@ -15,8 +15,8 @@ from urllib.parse import urlencode
 import time
 import logging
 
-from models import BO3Match, BO3AIPrediction, BO3BettingOdds, BO3Tournament
-from parser import parse_match, parse_ai_prediction, parse_betting_odds, parse_tournament
+from .models import BO3Match, BO3AIPrediction, BO3BettingOdds, BO3Tournament
+from .parser import parse_match, parse_ai_prediction, parse_betting_odds, parse_tournament
 
 logger = logging.getLogger(__name__)
 

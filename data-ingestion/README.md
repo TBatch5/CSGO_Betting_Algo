@@ -59,11 +59,36 @@ finally:
 
 See `bo3-api/example_bo3_usage.py` for more detailed examples.
 
+## Data Ingestion Pipeline
+
+The data ingestion pipeline combines the BO3 API client with the database storage service to automatically fetch and store match data.
+
+**Location:** `ingest_bo3_data.py`
+
+### CLI Options
+
+- `--days N`: Number of days ahead to fetch (default: 7)
+- `--tier TIER [TIER ...]`: Tournament tiers to filter (default: s a)
+- `--require-predictions`: Only fetch matches with AI predictions (default: True)
+- `--no-require-predictions`: Fetch all matches
+- `--require-odds`: Only fetch matches with betting odds (default: False)
+- `--dry-run`: Fetch data but don't save to database
+- `--verbose`: Enable verbose logging
+
+### What Gets Stored
+
+For each match, the ingestion pipeline stores:
+- **Match data**: Status, scores, start time, tier, etc.
+- **Teams**: Both teams with logos, country codes, etc.
+- **Tournament**: Tournament details, prize pool, tier, etc.
+- **AI Predictions**: Predicted scores and winner (if available)
+- **Betting Odds**: Odds from various providers (if available)
+
 ## Future Enhancements
 
 - HLTV integration for historical match data
 - Data validation and normalization components
-- Storage service integration
+- Scheduling and orchestration for periodic ingestion
 - Scheduling and orchestration for periodic ingestion
 - Support for other data sources (ESL, BLAST, etc.)
 - Real-time match tracking
