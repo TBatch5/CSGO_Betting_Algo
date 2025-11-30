@@ -81,27 +81,69 @@ class StorageService:
         """
         with self._get_session() as session:
             try:
-                # Convert typed model to database dictionary using mutation
-                match_dict = self.mutation.to_match_dict(match_data)
-                source_type = match_dict["source_type"]
-                source_id = match_dict["source_id"]
+                # Convert typed model to database object using mutation
+                match_obj = self.mutation.to_match(match_data)
+                source_type = match_obj.source_type
+                source_id = match_obj.source_id
                 
                 # Extract team and tournament data from mutation result
-                team1_data = match_dict.pop("_team1", None)
-                team2_data = match_dict.pop("_team2", None)
-                tournament_data = match_dict.pop("_tournament", None)
+                # Note: These are populated in the match object by the mutation
+                team1_data = match_obj.team1
+                team2_data = match_obj.team2
+                tournament_data = match_obj.tournament
                 
-                if not team1_data or not team2_data:
-                    raise ValueError("Match must have team1 and team2 data")
+                # For BO3Mutation, team1 and team2 are Team objects, not raw data
+                # But we need to handle if they are missing
+                if not team1_data and not match_obj.team1_id:
+                     # If we don't have team objects AND don't have team IDs, we can't proceed
+                     # However, the mutation might have set team1_id directly if it only had IDs
+                     # But typically we expect full team data for new matches
+                     pass
+
+                # If we have team objects, we need to save them first
+                # The mutation returns Team objects, but _get_or_create_team_from_model expects the API model
+                # This is a bit of a mismatch in the original design vs new design
+                # The original design passed raw API models to _get_or_create_team_from_model
                 
-                # Create/get teams using mutation
-                team1_id = self._get_or_create_team_from_model(team1_data, source_type, session)
-                team2_id = self._get_or_create_team_from_model(team2_data, source_type, session)
+                # In the previous implementation:
+                # match_dict = self.mutation.to_match_dict(match_data)
+                # team1_data = match_dict.pop("_team1", None)
+                # _team1 was the API model (e.g. BO3Team)
+                
+                # In the new implementation:
+                # match_obj = self.mutation.to_match(match_data)
+                # match_obj.team1 is a Team object (the result of to_team), NOT the API model
+                
+                # So we can't call `_get_or_create_team_from_model` with `match_obj.team1` because
+                # `_get_or_create_team_from_model` calls `self.mutation.to_team` which expects API model.
+                
+                # We need to adjust `_get_or_create_team_from_model` to handle Team objects directly
+                # OR we need to change how we handle this dependency.
+                
+                # Since `match_obj.team1` is already a `Team` object (database ready), 
+                # we should just save it directly.
+                
+                team1_id = None
+                if match_obj.team1:
+                    team1_id = self._get_or_create_team_from_object(match_obj.team1, session)
+                elif match_obj.team1_id:
+                    team1_id = match_obj.team1_id
+                
+                team2_id = None
+                if match_obj.team2:
+                    team2_id = self._get_or_create_team_from_object(match_obj.team2, session)
+                elif match_obj.team2_id:
+                    team2_id = match_obj.team2_id
+                
+                if not team1_id or not team2_id:
+                    raise ValueError("Match must have team1 and team2 data or IDs")
                 
                 # Get or create tournament
                 tournament_id: Optional[UUID] = None
-                if tournament_data:
-                    tournament_id = self._get_or_create_tournament_from_model(tournament_data, source_type, session)
+                if match_obj.tournament:
+                    tournament_id = self._get_or_create_tournament_from_object(match_obj.tournament, session)
+                elif match_obj.tournament_id:
+                    tournament_id = match_obj.tournament_id
                 
                 # Check if match already exists
                 existing = session.execute(
@@ -112,7 +154,19 @@ class StorageService:
                 if existing:
                     # Update existing match
                     match_id = UUID(str(existing))
-                    self.update_match(match_id, match_dict)
+                    # We can't use update_match easily here because it expects a dict of updates
+                    # We should probably refactor update_match or construct the dict
+                    
+                    # Construct updates dict
+                    updates = {
+                        "status": match_obj.status,
+                        "team1_score": match_obj.team1_score,
+                        "team2_score": match_obj.team2_score,
+                        "winner_team_id": match_obj.winner_team_id,
+                        "loser_team_id": match_obj.loser_team_id,
+                        "raw_data": match_obj.raw_data,
+                    }
+                    self.update_match(match_id, updates)
                     return match_id
                 
                 # Insert new match
@@ -135,19 +189,19 @@ class StorageService:
                     {
                         "source_type": source_type,
                         "source_id": source_id,
-                        "slug": match_dict.get("slug"),
+                        "slug": match_obj.slug,
                         "team1_id": str(team1_id),
                         "team2_id": str(team2_id),
                         "tournament_id": str(tournament_id) if tournament_id else None,
-                        "status": match_dict.get("status", "upcoming"),
-                        "start_date": match_dict.get("start_date"),
-                        "bo_type": match_dict.get("bo_type"),
-                        "tier": match_dict.get("tier"),
-                        "team1_score": match_dict.get("team1_score"),
-                        "team2_score": match_dict.get("team2_score"),
-                        "winner_team_id": str(match_dict.get("winner_team_id")) if match_dict.get("winner_team_id") else None,
-                        "loser_team_id": str(match_dict.get("loser_team_id")) if match_dict.get("loser_team_id") else None,
-                        "raw_data": match_dict.get("raw_data"),
+                        "status": match_obj.status or "upcoming",
+                        "start_date": match_obj.start_date,
+                        "bo_type": match_obj.bo_type,
+                        "tier": match_obj.tier,
+                        "team1_score": match_obj.team1_score,
+                        "team2_score": match_obj.team2_score,
+                        "winner_team_id": str(match_obj.winner_team_id) if match_obj.winner_team_id else None,
+                        "loser_team_id": str(match_obj.loser_team_id) if match_obj.loser_team_id else None,
+                        "raw_data": match_obj.raw_data,
                         "last_fetched_at": datetime.utcnow(),
                     }
                 )
@@ -349,16 +403,14 @@ class StorageService:
         with self._get_session() as session:
             return self._get_or_create_team(team_data, source_type, session)
     
-    def _get_or_create_team_from_model(
+    def _get_or_create_team_from_object(
         self,
-        team_data: Any,
-        source_type: str,
+        team_obj: Any, # Should be Team dataclass
         session: Session
     ) -> UUID:
-        """Internal method to get or create team from typed model within a session."""
-        # Convert typed model to database dictionary using mutation
-        team_dict = self.mutation.to_team_dict(team_data)
-        source_id = team_dict["source_id"]
+        """Internal method to get or create team from Team dataclass within a session."""
+        source_type = team_obj.source_type
+        source_id = team_obj.source_id
         
         # Check if team exists
         existing = session.execute(
@@ -378,7 +430,15 @@ class StorageService:
                     :source_type, :source_id, :name, :slug, :country_code, :logo_url, :metadata
                 ) RETURNING id
             """),
-            team_dict
+            {
+                "source_type": source_type,
+                "source_id": source_id,
+                "name": team_obj.name,
+                "slug": team_obj.slug,
+                "country_code": team_obj.country_code,
+                "logo_url": team_obj.logo_url,
+                "metadata": team_obj.metadata,
+            }
         )
         team_id = UUID(str(result.scalar_one()))
         session.commit()
@@ -464,16 +524,14 @@ class StorageService:
         with self._get_session() as session:
             return self._get_or_create_tournament(tournament_data, source_type, session)
     
-    def _get_or_create_tournament_from_model(
+    def _get_or_create_tournament_from_object(
         self,
-        tournament_data: Any,
-        source_type: str,
+        tournament_obj: Any, # Should be Tournament dataclass
         session: Session
     ) -> UUID:
-        """Internal method to get or create tournament from typed model within a session."""
-        # Convert typed model to database dictionary using mutation
-        tournament_dict = self.mutation.to_tournament_dict(tournament_data)
-        source_id = tournament_dict["source_id"]
+        """Internal method to get or create tournament from Tournament dataclass within a session."""
+        source_type = tournament_obj.source_type
+        source_id = tournament_obj.source_id
         
         # Check if tournament exists
         existing = session.execute(
@@ -495,7 +553,20 @@ class StorageService:
                     :prize_pool, :discipline_id, :status, :start_date, :end_date, :metadata
                 ) RETURNING id
             """),
-            tournament_dict
+            {
+                "source_type": source_type,
+                "source_id": source_id,
+                "name": tournament_obj.name,
+                "slug": tournament_obj.slug,
+                "tier": tournament_obj.tier,
+                "tier_rank": tournament_obj.tier_rank,
+                "prize_pool": tournament_obj.prize_pool,
+                "discipline_id": tournament_obj.discipline_id,
+                "status": tournament_obj.status,
+                "start_date": tournament_obj.start_date,
+                "end_date": tournament_obj.end_date,
+                "metadata": tournament_obj.metadata,
+            }
         )
         tournament_id = UUID(str(result.scalar_one()))
         session.commit()
@@ -572,10 +643,10 @@ class StorageService:
         """
         with self._get_session() as session:
             try:
-                # Convert typed model to database dictionary using mutation
-                prediction_dict = self.mutation.to_ai_prediction_dict(prediction_data, match_id)
-                source_type = prediction_dict["source_type"]
-                source_id = prediction_dict["source_id"]
+                # Convert typed model to database object using mutation
+                prediction_obj = self.mutation.to_ai_prediction(prediction_data, match_id)
+                source_type = prediction_obj.source_type
+                source_id = prediction_obj.source_id
                 
                 # Check if prediction already exists
                 existing = session.execute(
@@ -595,7 +666,7 @@ class StorageService:
                         """),
                         {
                             "id": str(existing),
-                            "prediction_data": prediction_dict["prediction_data"],
+                            "prediction_data": prediction_obj.prediction_data,
                             "source_id": source_id,
                         }
                     )
@@ -611,7 +682,12 @@ class StorageService:
                             :match_id, :source_type, :source_id, :prediction_data
                         ) RETURNING id
                     """),
-                    prediction_dict
+                    {
+                        "match_id": str(match_id),
+                        "source_type": source_type,
+                        "source_id": source_id,
+                        "prediction_data": prediction_obj.prediction_data,
+                    }
                 )
                 pred_id = UUID(str(result.scalar_one()))
                 session.commit()
@@ -676,10 +752,10 @@ class StorageService:
         """
         with self._get_session() as session:
             try:
-                # Convert typed model to database dictionary using mutation
-                odds_dict = self.mutation.to_betting_odds_dict(odds_data, match_id)
-                source_type = odds_dict["source_type"]
-                provider = odds_dict["provider"]
+                # Convert typed model to database object using mutation
+                odds_obj = self.mutation.to_betting_odds(odds_data, match_id)
+                source_type = odds_obj.source_type
+                provider = odds_obj.provider
                 
                 # Check if odds already exist
                 existing = session.execute(
@@ -706,11 +782,11 @@ class StorageService:
                         """),
                         {
                             "id": str(existing),
-                            "team1_odds": odds_dict["team1_odds"],
-                            "team2_odds": odds_dict["team2_odds"],
-                            "team1_implied_prob": odds_dict["team1_implied_prob"],
-                            "team2_implied_prob": odds_dict["team2_implied_prob"],
-                            "odds_data": odds_dict["odds_data"],
+                            "team1_odds": odds_obj.team1_odds,
+                            "team2_odds": odds_obj.team2_odds,
+                            "team1_implied_prob": odds_obj.team1_implied_prob,
+                            "team2_implied_prob": odds_obj.team2_implied_prob,
+                            "odds_data": odds_obj.odds_data,
                         }
                     )
                     session.commit()
@@ -731,7 +807,16 @@ class StorageService:
                             :odds_data, NOW()
                         ) RETURNING id
                     """),
-                    odds_dict
+                    {
+                        "match_id": str(match_id),
+                        "source_type": source_type,
+                        "provider": provider,
+                        "team1_odds": odds_obj.team1_odds,
+                        "team2_odds": odds_obj.team2_odds,
+                        "team1_implied_prob": odds_obj.team1_implied_prob,
+                        "team2_implied_prob": odds_obj.team2_implied_prob,
+                        "odds_data": odds_obj.odds_data,
+                    }
                 )
                 odds_id = UUID(str(result.scalar_one()))
                 session.commit()
@@ -791,4 +876,3 @@ class StorageService:
                 }
                 for r in results
             ]
-
