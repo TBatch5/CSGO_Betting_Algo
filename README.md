@@ -73,7 +73,7 @@ This project uses **strict typing** with mypy. All Python code must pass type ch
 **Enforcement:**
 - **Pre-commit hooks**: Automatically run mypy before commits (install with `make install-hooks`)
 - **CI/CD**: GitHub Actions workflow checks types on push/PR
-- **Manual check**: Run `make type-check` or `mypy data-ingestion/bo3-api/ --config-file pyproject.toml`
+- **Manual check**: Run `make type-check` or `mypy data_ingestion/bo3_api/ --config-file pyproject.toml`
 
 **Quick Start:**
 ```bash

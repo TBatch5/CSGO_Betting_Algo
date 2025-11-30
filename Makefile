@@ -3,12 +3,12 @@
 # Type checking with mypy
 type-check:
 	@echo "Running mypy type checking..."
-	python3 -m mypy data-ingestion/bo3-api/ --config-file pyproject.toml
+	python3 -m mypy data_ingestion/bo3_api/ --config-file pyproject.toml
 
 # Install type stubs
 install-types:
 	@echo "Installing type stubs..."
-	python3 -m pip install -r data-ingestion/requirements.txt
+	python3 -m pip install -r data_ingestion/requirements.txt
 	python3 -m mypy --install-types --non-interactive
 
 # Run all checks

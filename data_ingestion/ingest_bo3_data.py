@@ -10,22 +10,16 @@ import sys
 import argparse
 import logging
 from pathlib import Path
-from datetime import datetime
 from typing import List, Optional
-import os
 from dotenv import load_dotenv
 
-# Add bo3-api to path
-bo3_api_path = Path(__file__).parent / 'bo3-api'
-sys.path.insert(0, str(bo3_api_path))
+# Add parent directories to Python path for package imports
+sys.path.insert(0, str(Path(__file__).parent))  # for bo3_api package
+sys.path.insert(0, str(Path(__file__).parent.parent))  # for data_storage package
 
-# Add data-storage to path
-data_storage_path = Path(__file__).parent.parent / 'data-storage'
-sys.path.insert(0, str(data_storage_path))
-
-from bo3_client import BO3Client
-from storage_service import StorageService
-from mutations.bo3_mutations import BO3Mutation
+from bo3_api.bo3_client import BO3Client
+from data_storage.storage_service import StorageService
+from data_storage.mutations.bo3_mutations import BO3Mutation
 
 # Configure logging
 logging.basicConfig(
@@ -221,21 +215,12 @@ def main():
     parser.add_argument(
         '--require-predictions',
         action='store_true',
-        default=True,
-        help='Only fetch matches with AI predictions (default: True)'
-    )
-    
-    parser.add_argument(
-        '--no-require-predictions',
-        dest='require_predictions',
-        action='store_false',
-        help='Fetch all matches regardless of AI predictions'
+        help='Only fetch matches with AI predictions (default: False)'
     )
     
     parser.add_argument(
         '--require-odds',
         action='store_true',
-        default=tournament,
         help='Only fetch matches with betting odds (default: False)'
     )
     

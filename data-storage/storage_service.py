@@ -14,9 +14,9 @@ from sqlalchemy import create_engine, text, select, update, delete
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
 
-from .config import get_database_config
-from .mutations.base import BaseMutation
-from .mutations.bo3_mutations import BO3Mutation
+from config import get_database_config
+from mutations.base import BaseMutation
+from mutations.bo3_mutations import BO3Mutation
 
 logger = logging.getLogger(__name__)
 

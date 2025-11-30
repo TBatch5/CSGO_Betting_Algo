@@ -6,40 +6,11 @@ Converts strongly typed BO3 API models to database-ready dataclasses.
 
 from typing import Dict, Any, Optional
 from uuid import UUID
-import sys
 from pathlib import Path
 
-from mutations.base import BaseMutation
-from models import Team, Tournament, Match, AIPrediction, BettingOdds
-
-# Import BO3 models from data-ingestion
-# Note: This assumes data-ingestion is in the parent directory structure
-# In production, you may want to install data-ingestion as a package
-data_ingestion_path = Path(__file__).parent.parent.parent.parent / 'data-ingestion' / 'bo3-api'
-if data_ingestion_path.exists():
-    sys.path.insert(0, str(data_ingestion_path))
-    try:
-        from models import (  # type: ignore
-            BO3Team,
-            BO3Tournament,
-            BO3Match,
-            BO3AIPrediction,
-            BO3BettingOdds,
-        )
-    except ImportError:
-        # Fallback if models can't be imported
-        BO3Team = Any  # type: ignore
-        BO3Tournament = Any  # type: ignore
-        BO3Match = Any  # type: ignore
-        BO3AIPrediction = Any  # type: ignore
-        BO3BettingOdds = Any  # type: ignore
-else:
-    # Fallback for when models aren't available
-    BO3Team = Any  # type: ignore
-    BO3Tournament = Any  # type: ignore
-    BO3Match = Any  # type: ignore
-    BO3AIPrediction = Any  # type: ignore
-    BO3BettingOdds = Any  # type: ignore
+from .base import BaseMutation
+from ..models import Team, Tournament, Match, AIPrediction, BettingOdds
+from data_ingestion.bo3_api.models import BO3Team, BO3Tournament, BO3Match, BO3AIPrediction, BO3BettingOdds
 
 
 class BO3Mutation(BaseMutation):

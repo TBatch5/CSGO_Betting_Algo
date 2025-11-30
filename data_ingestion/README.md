@@ -10,7 +10,7 @@ The Data Ingestion Service is responsible for collecting CS2 match data from ext
 
 The service includes a BO3 API client for fetching CS2 match data with AI predictions and betting odds.
 
-**Location:** `bo3-api/bo3_client.py`
+**Location:** `bo3_api/bo3_client.py`
 
 **Key Features:**
 - Fetch upcoming matches for a specified number of days
@@ -24,14 +24,14 @@ The service includes a BO3 API client for fetching CS2 match data with AI predic
 ## Setup
 
 1. Install dependencies: `pip install -r requirements.txt`
-2. See `bo3-api/example_bo3_usage.py` for usage examples
+2. See `bo3_api/example_bo3_usage.py` for usage examples
 
 ## Example Usage
 
 ### BO3 API Client (Method 1)
 
 ```python
-# Run from bo3-api directory or add to path
+# Run from bo3_api directory or add to path
 from bo3_client import BO3Client
 
 # Initialize client
@@ -57,7 +57,7 @@ finally:
     client.close()
 ```
 
-See `bo3-api/example_bo3_usage.py` for more detailed examples.
+See `bo3_api/example_bo3_usage.py` for more detailed examples.
 
 ## Data Ingestion Pipeline
 

@@ -4,5 +4,8 @@ alwaysApply: true
 
 Always read the documentation folder structure and use folders / files which information would be important to use in conjunction with the prompt.
 
+Virtual environment:
+    - source bin/activate to activate the virtual environment
+
 Folders to use:
     - bo3-api: gather information from the bo3-api site
